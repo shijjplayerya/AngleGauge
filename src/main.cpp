@@ -8,8 +8,43 @@ using namespace std;
 using namespace cv;
 /* Global Value */ 
 vector<Point2i> points;
-string imgPath = "test.jpg";
+string imgPath = "test1.jpg";
 Mat img = imread(imgPath);
+int HEIGHT = 9;
+int WIDTH = 9;
+
+void fastCornerDetection(Point& pt)
+{
+    // 0. 截取click点附近的图像
+    Rect roi(pt.x - HEIGHT/2, pt.y - WIDTH/2, HEIGHT, WIDTH);
+    Mat image = img(roi);
+    // 1. 初步处理数据
+    Mat gray;
+
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+    //imshow("Gray", gray);
+    GaussianBlur(gray,gray,Size(3,3),1.5);
+    //imshow("Bin_Gray",gray);
+    //preprocessImg(gray);
+
+    // 2. 创建 FAST 检测器
+    Ptr<FastFeatureDetector> fast = FastFeatureDetector::create();
+
+    // 3. 设置参数
+    fast->setThreshold(20);                        // 设置阈值
+    fast->setNonmaxSuppression(true);              // 启用非极大值抑制
+    fast->setType(FastFeatureDetector::TYPE_9_16); // 设置邻域类型
+
+    // 4. 检测角点
+    vector<KeyPoint> keypoints;
+    fast->detect(gray, keypoints);
+
+    if(keypoints.size() !=0)
+        pt = Point(pt.x+keypoints[0].pt.x-HEIGHT/2-1,pt.y+keypoints[0].pt.y-WIDTH/2-1);
+    // 5. 绘制角点
+    //drawKeypoints(image, keypoints, image, Scalar(0, 255, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    
+}
 
 /* Function */
 double getAngel()
@@ -25,10 +60,13 @@ double getAngel()
 
 void onMouse(int event, int x, int y, int flag, void* param)
 {
+    Point click_pt = {x,y};
+
     if(event == EVENT_LBUTTONUP)
     {
-        points.push_back(Point2i(x,y));
-        circle(img,Point(x,y),2,Scalar(0,0,255),2,8,0);
+        fastCornerDetection(click_pt);
+        points.push_back(click_pt);
+        circle(img,click_pt,2,Scalar(0,0,255),2,8,0);
         cout<<points<<endl;
         
         if(points.size() == 1)
